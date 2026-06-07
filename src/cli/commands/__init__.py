@@ -10,6 +10,7 @@ from cli.commands.format import format_cmd
 from cli.commands.pipeline import pipeline_command
 from cli.commands.resume import resume
 from cli.commands.translate import translate
+from cli.commands.web import web_command
 
 
 def register_commands(app: click.Group) -> None:
@@ -22,3 +23,4 @@ def register_commands(app: click.Group) -> None:
     app.add_command(resume)
     app.add_command(format_cmd, name="format")
     app.add_command(config)
+    app.add_command(web_command)

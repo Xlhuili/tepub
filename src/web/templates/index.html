@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TEPUB</title>
+<style>
+  :root {
+    --bg: #fafaf8;
+    --panel: #fff;
+    --border: #e3e3df;
+    --muted: #6b6b66;
+    --text: #1c1c1a;
+    --accent: #2563eb;
+    --accent-soft: #eff5ff;
+    --ok: #15803d;
+    --bad: #b91c1c;
+    --warn: #b45309;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin-bottom: 24px; font-size: 13px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  input[type=text], select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+  }
+  input[type=file] { font-size: 14px; }
+  .row { display: flex; gap: 12px; }
+  .row > * { flex: 1; }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 16px;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.ghost {
+    background: transparent;
+    color: var(--muted);
+    padding: 4px 8px;
+    margin-top: 0;
+    font-size: 12px;
+  }
+  button.ghost:hover { color: var(--text); }
+  .job {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+  .job-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .job-title { font-weight: 500; }
+  .job-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .b-queued { background: #f1f1ee; color: var(--muted); }
+  .b-running { background: var(--accent-soft); color: var(--accent); }
+  .b-done { background: #ecfdf5; color: var(--ok); }
+  .b-failed { background: #fef2f2; color: var(--bad); }
+  .job-body { margin-top: 10px; display: none; }
+  .job.open .job-body { display: block; }
+  .artifacts a {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 13px;
+    margin: 4px 6px 0 0;
+  }
+  pre.log {
+    background: #1c1c1a;
+    color: #d9d9d4;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    max-height: 280px;
+    overflow: auto;
+    margin: 10px 0 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  #msg { margin-top: 10px; font-size: 13px; }
+  #msg.ok { color: var(--ok); }
+  #msg.err { color: var(--bad); }
+  .progress {
+    height: 3px;
+    background: var(--accent-soft);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+    display: none;
+  }
+  .progress.active { display: block; }
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.2s;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TEPUB</h1>
+  <div class="sub">上传 EPUB → 翻译 / 生成有声书 / 同时来。</div>
+
+  <div class="card">
+    <form id="form">
+      <label>EPUB 文件</label>
+      <input type="file" name="file" accept=".epub" required />
+
+      <label>任务</label>
+      <select name="task">
+        <option value="translate">仅翻译</option>
+        <option value="audiobook">仅有声书</option>
+        <option value="both">翻译 + 有声书</option>
+      </select>
+
+      <div id="translate-opts">
+        <label>目标语言（翻译用）</label>
+        <input type="text" name="target_language" value="Simplified Chinese" />
+      </div>
+
+      <div id="audiobook-opts" style="display:none">
+        <div class="row">
+          <div>
+            <label>TTS Provider</label>
+            <select name="tts_provider">
+              <option value="edge">Edge TTS（免费）</option>
+              <option value="openai">OpenAI TTS（付费）</option>
+            </select>
+          </div>
+          <div>
+            <label>Voice（可选）</label>
+            <input type="text" name="voice" placeholder="如 zh-CN-XiaoxiaoNeural" />
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" id="submit">上传并开始</button>
+      <div class="progress" id="progress"><div class="progress-bar" id="progress-bar"></div></div>
+      <div id="msg"></div>
+    </form>
+  </div>
+
+  <h2 style="font-size:16px;margin:24px 0 10px">任务</h2>
+  <div id="jobs"><div class="empty">还没有任务。</div></div>
+</div>
+
+<script>
+const form = document.getElementById('form');
+const msg = document.getElementById('msg');
+const jobsEl = document.getElementById('jobs');
+const taskSel = form.elements['task'];
+const trOpts = document.getElementById('translate-opts');
+const abOpts = document.getElementById('audiobook-opts');
+const openJobs = new Set();
+
+function updateOpts() {
+  const t = taskSel.value;
+  trOpts.style.display = (t === 'translate' || t === 'both') ? '' : 'none';
+  abOpts.style.display = (t === 'audiobook' || t === 'both') ? '' : 'none';
+}
+taskSel.addEventListener('change', updateOpts);
+updateOpts();
+
+function fmtBytes(n) {
+  if (!n) return '';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+  return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+}
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString();
+}
+
+function renderJobs(jobs) {
+  if (!jobs.length) {
+    jobsEl.innerHTML = '<div class="empty">还没有任务。</div>';
+    return;
+  }
+  jobsEl.innerHTML = jobs.map(j => {
+    const open = openJobs.has(j.id);
+    const status = j.status || 'queued';
+    const tasks = { translate: '翻译', audiobook: '有声书', both: '翻译 + 有声书' };
+    const artifacts = (j.artifacts || []).filter(a => a.kind === 'file').map(a =>
+      `<a href="/jobs/${j.id}/download/${encodeURIComponent(a.rel)}">${a.name} <span style="opacity:.6">${fmtBytes(a.size)}</span></a>`
+    ).join('');
+    const errLine = j.error ? `<div style="color:var(--bad);font-size:12px;margin-top:6px">${escapeHtml(j.error)}</div>` : '';
+    const canDelete = status === 'done' || status === 'failed';
+    return `
+      <div class="job ${open ? 'open' : ''}" data-id="${j.id}">
+        <div class="job-head">
+          <div style="flex:1;cursor:pointer" onclick="toggleJob('${j.id}')">
+            <div class="job-title">${escapeHtml(j.filename || '(no name)')}</div>
+            <div class="job-meta">
+              ${tasks[j.task] || j.task} · ${fmtTime(j.created_at)}
+              ${j.target_language ? '· → ' + escapeHtml(j.target_language) : ''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge b-${status}">${status}</span>
+            ${canDelete ? `<button class="ghost" onclick="deleteJob('${j.id}')">删除</button>` : ''}
+          </div>
+        </div>
+        <div class="job-body">
+          ${artifacts ? `<div class="artifacts" style="margin-top:8px">${artifacts}</div>` : ''}
+          ${errLine}
+          <pre class="log" id="log-${j.id}">加载中…</pre>
+        </div>
+      </div>`;
+  }).join('');
+  // Load logs for open jobs
+  openJobs.forEach(id => loadLog(id));
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadLog(id) {
+  try {
+    const r = await fetch(`/api/jobs/${id}/log`);
+    if (!r.ok) return;
+    const { log } = await r.json();
+    const el = document.getElementById(`log-${id}`);
+    if (el) {
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
+      el.textContent = log || '(暂无日志)';
+      if (atBottom) el.scrollTop = el.scrollHeight;
+    }
+  } catch (e) {}
+}
+
+window.toggleJob = (id) => {
+  if (openJobs.has(id)) openJobs.delete(id);
+  else { openJobs.add(id); loadLog(id); }
+  document.querySelector(`.job[data-id="${id}"]`)?.classList.toggle('open');
+};
+
+window.deleteJob = async (id) => {
+  if (!confirm('删除这个任务和它产生的文件？')) return;
+  const r = await fetch(`/api/jobs/${id}/delete`, { method: 'POST' });
+  if (r.ok) refresh();
+  else alert('删除失败');
+};
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/jobs');
+    if (!r.ok) return;
+    const jobs = await r.json();
+    renderJobs(jobs);
+  } catch (e) {}
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const submit = document.getElementById('submit');
+  const progress = document.getElementById('progress');
+  const bar = document.getElementById('progress-bar');
+  submit.disabled = true;
+  msg.className = '';
+  msg.textContent = '';
+  progress.classList.add('active');
+  bar.style.width = '0%';
+
+  const fd = new FormData(form);
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/upload');
+  xhr.upload.onprogress = (ev) => {
+    if (ev.lengthComputable) bar.style.width = (ev.loaded / ev.total * 100) + '%';
+  };
+  xhr.onload = () => {
+    submit.disabled = false;
+    progress.classList.remove('active');
+    bar.style.width = '0%';
+    if (xhr.status >= 200 && xhr.status < 300) {
+      msg.textContent = '已加入队列。';
+      msg.className = 'ok';
+      form.reset();
+      updateOpts();
+      refresh();
+    } else {
+      let detail = xhr.responseText;
+      try { detail = JSON.parse(xhr.responseText).detail || detail; } catch (e) {}
+      msg.textContent = '失败：' + detail;
+      msg.className = 'err';
+    }
+  };
+  xhr.onerror = () => {
+    submit.disabled = false;
+    progress.classList.remove('active');
+    msg.textContent = '网络错误';
+    msg.className = 'err';
+  };
+  xhr.send(fd);
+});
+
+refresh();
+setInterval(refresh, 2500);
+</script>
+</body>
+</html>

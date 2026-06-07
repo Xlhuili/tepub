@@ -26,6 +26,7 @@ classifiers = [
 
 dependencies = [
   "Pillow>=10.2",
+  "anthropic>=0.34",
   "cjk-text-formatter>=1.1.0",
   "click>=8.1",
   "ebooklib>=0.18",

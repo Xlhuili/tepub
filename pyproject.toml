@@ -30,6 +30,7 @@ dependencies = [
   "click>=8.1",
   "ebooklib>=0.18",
   "edge-tts>=6.1",
+  "html2text>=2024.2",
   "langdetect>=1.0.9",
   "lxml>=5.0",
   "mutagen>=1.47",
@@ -38,6 +39,7 @@ dependencies = [
   "portalocker>=3.0",
   "pydantic>=2.6",
   "pydub>=0.25",
+  "pyyaml>=6.0",
   "requests>=2.31",
   "rich>=13.7",
 ]
